@@ -1,0 +1,21 @@
+# CODEOWNERS
+# Reviewers required per area. Ownership is per Phase 1 role; rotate in Phase 2.
+
+# Default: everything needs the team lead's review
+*                       @ashrif2006
+
+# Requirements and product decisions
+/docs/requirements.md   @ashrif2006
+/docs/prompt-log.md     @ashrif2006
+
+# Architecture and design diagrams
+/docs/design/           @ashrif2006
+
+# DevOps: pipeline, containers, repository settings
+/.github/               @ashrif2006
+/Dockerfile             @ashrif2006
+/docker-compose.yml     @ashrif2006
+
+# Backend
+/src/                   @ashrif2006
+/tests/                 @ashrif2006

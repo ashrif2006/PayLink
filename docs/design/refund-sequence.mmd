@@ -1,0 +1,50 @@
+%% Sequence Diagram — Refund a Failed Payment
+%% Two entry points share one refund path: a biller failure callback (automatic release),
+%% and a support employee refunding an Unknown or settled payment (manual, audited).
+
+sequenceDiagram
+    autonumber
+    participant B as Biller System
+    actor S as Support Employee
+    participant API as PayLink API
+    participant PP as Payment Processing
+    participant W as Wallet
+    participant L as Ledger
+    participant DB as Database
+    participant N as Notifications
+
+    alt automatic release after a biller failure
+        B->>API: callback with paymentId, status=Failed, reason
+        API->>PP: HandleBillerCallback(callbackId, paymentId)
+
+        PP->>DB: has callbackId been processed
+        alt duplicate callback
+            DB-->>PP: already processed
+            PP-->>API: 200 ignored, idempotent
+        else first time
+            PP->>DB: load payment and lock row
+            PP->>PP: check status allows refund
+            PP->>W: Release(amount + fee)
+            W->>L: append Release entries
+            PP->>DB: payment = Refunded with reason
+            PP->>N: Notify customer refunded
+            PP-->>API: 200 done
+        end
+    else manual refund from support
+        S->>API: POST /payments/{id}/refund with reason
+        API->>PP: ManualRefund(paymentId, reason, actor)
+        PP->>DB: load payment and verify status is Unknown or Completed
+        alt not refundable
+            PP-->>API: 409 conflict
+            API-->>S: cannot refund in this state
+        else refundable
+            PP->>W: Release held funds or reverse capture
+            W->>L: append reversal entries
+            PP->>DB: payment = Refunded with audit actor and reason
+            PP->>N: Notify customer refunded
+            PP-->>API: 200 done
+            API-->>S: refund confirmed
+        end
+    end
+
+    Note over PP,DB: every refund writes a ledger entry and an audit record,<br/>and a payment is refunded at most once.

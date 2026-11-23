@@ -1,0 +1,158 @@
+%% Domain Class Diagram — PayLink
+%% The wallet keeps two balances on purpose: availableBalance can be spent,
+%% heldBalance is promised to a biller but has not left yet.
+%% LedgerEntry is append-only, so the balance can always be rebuilt from it.
+
+classDiagram
+    class Customer {
+        +Guid id
+        +string fullName
+        +string email
+        +string phone
+        +KycStatus kycStatus
+        +bool isActive
+    }
+
+    class Wallet {
+        +Guid id
+        +Guid customerId
+        +string currency
+        +decimal availableBalance
+        +decimal heldBalance
+        +Hold(amount) void
+        +Release(amount) void
+        +Capture(amount) void
+        +TopUp(amount) void
+    }
+
+    class Payment {
+        +Guid id
+        +Guid walletId
+        +Guid billerId
+        +string billReference
+        +decimal amount
+        +decimal fee
+        +string currency
+        +PaymentStatus status
+        +string idempotencyKey
+        +string billerTransactionId
+        +DateTimeOffset createdAt
+        +DateTimeOffset settledAt
+    }
+
+    class LedgerEntry {
+        +Guid id
+        +Guid walletId
+        +Guid paymentId
+        +LedgerEntryType type
+        +decimal amount
+        +decimal balanceAfter
+        +DateTimeOffset createdAt
+    }
+
+    class Biller {
+        +Guid id
+        +string name
+        +BillerCategory category
+        +bool isActive
+    }
+
+    class FeePolicy {
+        +decimal fixedAmount
+        +decimal percentage
+        +decimal minimum
+        +decimal maximum
+        +Calculate(amount) decimal
+    }
+
+    class Notification {
+        +Guid id
+        +Guid customerId
+        +Guid paymentId
+        +Channel channel
+        +string template
+        +NotificationStatus status
+    }
+
+    class ReconciliationRecord {
+        +Guid id
+        +Guid billerId
+        +DateOnly settlementDate
+        +decimal expectedTotal
+        +decimal actualTotal
+        +ReconciliationStatus status
+    }
+
+    class PaymentStatus {
+        <<enumeration>>
+        Initiated
+        FundsHeld
+        SentToBiller
+        Completed
+        Failed
+        Unknown
+        Rejected
+        Refunded
+    }
+
+    class LedgerEntryType {
+        <<enumeration>>
+        TopUp
+        Hold
+        Capture
+        Release
+        Fee
+    }
+
+    class BillerCategory {
+        <<enumeration>>
+        Electricity
+        Water
+        Mobile
+        Internet
+    }
+
+    class KycStatus {
+        <<enumeration>>
+        NotStarted
+        Pending
+        Verified
+        Rejected
+    }
+
+    class Channel {
+        <<enumeration>>
+        Sms
+        Email
+        Push
+    }
+
+    class NotificationStatus {
+        <<enumeration>>
+        Queued
+        Sent
+        Failed
+    }
+
+    class ReconciliationStatus {
+        <<enumeration>>
+        Matched
+        Mismatched
+        InProgress
+    }
+
+    Customer "1" --> "0..*" Wallet : owns
+    Wallet "1" --> "0..*" LedgerEntry : records
+    Wallet "1" --> "0..*" Payment : pays from
+    Biller "1" --> "0..*" Payment : receives
+    Biller "1" --> "1" FeePolicy : charges
+    Payment "0..1" --> "0..*" LedgerEntry : moves
+    Payment "0..1" --> "0..*" Notification : informs
+    Payment --> PaymentStatus
+    LedgerEntry --> LedgerEntryType
+    Biller --> BillerCategory
+    Customer --> KycStatus
+    Notification --> Channel
+    Notification --> NotificationStatus
+    ReconciliationRecord --> ReconciliationStatus
+    Biller "1" --> "0..*" ReconciliationRecord : reconciled by

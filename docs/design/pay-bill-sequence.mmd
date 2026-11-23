@@ -1,0 +1,73 @@
+%% Sequence Diagram — Pay a Bill
+%% Happy path plus the two failure points that matter:
+%%  1. the hold is taken BEFORE the biller is called;
+%%  2. an ambiguous biller response lands in Unknown, not Failed, and the money stays held.
+
+sequenceDiagram
+    autonumber
+    actor C as Customer
+    participant API as PayLink API
+    participant PP as Payment Processing
+    participant W as Wallet
+    participant FR as Fraud Checks
+    participant FE as Fees
+    participant B as Biller System
+    participant DB as Database
+    participant N as Notifications
+
+    C->>API: POST /payments with billReference and idempotencyKey
+    API->>PP: PayBill(command)
+
+    PP->>DB: find payment by idempotencyKey
+    alt key already used
+        DB-->>PP: existing payment
+        PP-->>API: 200 with existing payment
+        API-->>C: same result, no second charge
+    else new request
+        PP->>B: GetBill(billReference)
+        B-->>PP: amount, dueDate, customerRef
+        PP->>FR: Check(customer, amount)
+        alt blocked
+            FR-->>PP: Rejected with reason
+            PP->>DB: payment = Rejected
+            PP-->>API: 409 rejected
+            API-->>C: rejection reason
+        else allowed
+            FR-->>PP: Allowed
+            PP->>FE: Calculate(amount, biller)
+            FE-->>PP: fee
+            PP->>W: Hold(amount + fee)
+            alt insufficient funds
+                W-->>PP: InsufficientFunds
+                PP->>DB: payment = Rejected
+                PP-->>API: 409 insufficient funds
+                API-->>C: not enough balance
+            else funds held
+                W-->>PP: held
+                PP->>DB: payment = FundsHeld
+                PP->>B: SubmitPayment(paymentId, amount)
+                PP->>DB: payment = SentToBiller
+                alt biller confirms
+                    B-->>PP: Completed with billerTransactionId
+                    PP->>W: Capture(amount + fee)
+                    PP->>DB: payment = Completed
+                    PP->>N: Notify customer success
+                    PP-->>API: 200 completed
+                    API-->>C: receipt
+                else biller declines
+                    B-->>PP: Failed with reason
+                    PP->>W: Release(amount + fee)
+                    PP->>DB: payment = Failed then Refunded
+                    PP->>N: Notify customer failed
+                    PP-->>API: 402 failed
+                    API-->>C: failure reason
+                else timeout or no answer
+                    Note over PP,B: the money may still have moved
+                    PP->>DB: payment = Unknown
+                    PP->>N: Notify customer pending review
+                    PP-->>API: 202 pending
+                    API-->>C: payment under review
+                end
+            end
+        end
+    end

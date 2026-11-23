@@ -1,0 +1,40 @@
+%% Payment State Diagram — PayLink
+%% Rules that make this diagram correct:
+%%  - Unknown is NOT refunded automatically: the biller may already have the money.
+%%  - Unknown resolves only through reconciliation, to Completed or to Refunded.
+%%  - Completed, Rejected and Refunded are final.
+%%  - A Failed payment always releases its hold, so it passes through Refunded.
+%%  - Retrying with the same idempotencyKey is not a state change.
+
+stateDiagram-v2
+    [*] --> Initiated : customer submits payment
+
+    Initiated --> Rejected : fraud check blocks
+    Initiated --> Rejected : insufficient funds
+    Initiated --> Rejected : invalid bill reference
+
+    Initiated --> FundsHeld : wallet hold succeeds
+    FundsHeld --> SentToBiller : request accepted by biller
+
+    SentToBiller --> Completed : biller confirms
+    SentToBiller --> Failed : biller declines
+    SentToBiller --> Unknown : timeout or ambiguous reply
+
+    Failed --> Refunded : hold released
+    Unknown --> Completed : reconciliation confirms payment
+    Unknown --> Refunded : reconciliation confirms failure
+
+    Completed --> [*]
+    Rejected --> [*]
+    Refunded --> [*]
+
+    note right of Unknown
+        Money stays held.
+        Never auto-refunded.
+        Resolved by reconciliation only.
+    end note
+
+    note right of Completed
+        Hold captured into a ledger debit.
+        Final state.
+    end note

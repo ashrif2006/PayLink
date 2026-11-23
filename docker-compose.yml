@@ -1,0 +1,40 @@
+# Local stack: API + PostgreSQL.
+# Brings up the whole system with:  docker compose up --build
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paylink-api
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      # Ready for Phase 2, when the API starts talking to the database.
+      ConnectionStrings__PayLink: "Host=db;Port=5432;Database=paylink;Username=paylink;Password=paylink_dev_password"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: paylink-db
+    environment:
+      POSTGRES_DB: paylink
+      POSTGRES_USER: paylink
+      POSTGRES_PASSWORD: paylink_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - paylink-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paylink -d paylink"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  paylink-db-data:

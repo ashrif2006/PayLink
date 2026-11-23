@@ -1,0 +1,99 @@
+%% ER Diagram — PayLink (PostgreSQL target)
+%% Money columns are numeric(18,2). Every balance change also writes a ledger_entries row,
+%% so wallets is a fast read model, not the source of truth.
+%% payments.idempotency_key is UNIQUE: that is what stops a double tap from charging twice.
+%% wallets.row_version supports optimistic concurrency (or use SELECT ... FOR UPDATE).
+
+erDiagram
+    CUSTOMERS ||--o{ WALLETS : owns
+    WALLETS ||--o{ PAYMENTS : pays
+    WALLETS ||--o{ LEDGER_ENTRIES : records
+    BILLERS ||--o{ PAYMENTS : receives
+    BILLERS ||--|| FEE_POLICIES : charges
+    PAYMENTS ||--o{ LEDGER_ENTRIES : moves
+    PAYMENTS ||--o{ NOTIFICATIONS : triggers
+    BILLERS ||--o{ RECONCILIATION_RECORDS : reconciled_by
+
+    CUSTOMERS {
+        uuid id PK
+        text full_name
+        text email UK
+        text phone
+        text kyc_status
+        boolean is_active
+        timestamptz created_at
+    }
+
+    WALLETS {
+        uuid id PK
+        uuid customer_id FK
+        char_3 currency
+        numeric_18_2 available_balance
+        numeric_18_2 held_balance
+        bigint row_version
+        timestamptz created_at
+    }
+
+    PAYMENTS {
+        uuid id PK
+        uuid wallet_id FK
+        uuid biller_id FK
+        text bill_reference
+        numeric_18_2 amount
+        numeric_18_2 fee
+        char_3 currency
+        text status
+        text idempotency_key UK
+        text biller_transaction_id
+        text failure_reason
+        timestamptz created_at
+        timestamptz settled_at
+    }
+
+    LEDGER_ENTRIES {
+        uuid id PK
+        uuid wallet_id FK
+        uuid payment_id FK
+        text entry_type
+        numeric_18_2 amount
+        numeric_18_2 balance_after
+        timestamptz created_at
+    }
+
+    BILLERS {
+        uuid id PK
+        text name
+        text category
+        boolean is_active
+        timestamptz created_at
+    }
+
+    FEE_POLICIES {
+        uuid id PK
+        uuid biller_id FK
+        numeric_18_2 fixed_amount
+        numeric_6_4 percentage
+        numeric_18_2 minimum
+        numeric_18_2 maximum
+        timestamptz effective_from
+    }
+
+    NOTIFICATIONS {
+        uuid id PK
+        uuid customer_id FK
+        uuid payment_id FK
+        text channel
+        text template
+        text status
+        timestamptz created_at
+    }
+
+    RECONCILIATION_RECORDS {
+        uuid id PK
+        uuid biller_id FK
+        date settlement_date
+        numeric_18_2 expected_total
+        numeric_18_2 actual_total
+        text status
+        timestamptz created_at
+    }

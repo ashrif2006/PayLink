@@ -1,0 +1,55 @@
+%% Use Case Diagram — PayLink
+%% Actors: Customer, Agent, Admin, Support Employee, plus external Biller System and Fraud Provider.
+%% Mermaid has no native UML use-case notation, so actors are rounded nodes and use cases are stadium nodes.
+
+flowchart LR
+    Customer([Customer])
+    Agent([Agent])
+    Admin([Admin])
+    Support([Support Employee])
+    Biller([Biller System])
+    Fraud([Fraud Provider])
+
+    subgraph PayLink
+        UC01([View wallet balance])
+        UC02([Top up wallet])
+        UC03([View transaction history])
+        UC04([Fetch bill details])
+        UC05([Pay a bill])
+        UC06([Track payment status])
+        UC07([Raise manual refund])
+        UC08([Manage biller catalog])
+        UC09([Reconcile settlements])
+        UC10([Review blocked payments])
+        UC11([Send notification])
+        UC12([Run fraud checks])
+        UC13([Calculate service fee])
+        UC14([Apply wallet hold])
+    end
+
+    Customer --> UC01
+    Customer --> UC02
+    Customer --> UC03
+    Customer --> UC04
+    Customer --> UC05
+    Customer --> UC06
+
+    Agent --> UC02
+    Agent --> UC04
+    Agent --> UC05
+
+    Support --> UC06
+    Support --> UC07
+
+    Admin --> UC08
+    Admin --> UC09
+    Admin --> UC10
+
+    UC05 --> UC13
+    UC05 --> UC12
+    UC05 --> UC14
+    UC05 --> UC11
+
+    UC05 --> Biller
+    UC12 --> Fraud
+    UC09 --> Biller
