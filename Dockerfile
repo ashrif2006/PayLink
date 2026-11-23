@@ -16,7 +16,7 @@ RUN dotnet publish "src/PayLink.Api/PayLink.Api.csproj" \
     /p:UseAppHost=false
 
 # ---- runtime ----
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS final
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080 \
     DOTNET_RUNNING_IN_CONTAINER=true
