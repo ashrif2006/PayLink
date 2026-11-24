@@ -1,0 +1,20 @@
+stateDiagram-v2
+    [*] --> Initiated
+
+    Initiated --> FundsHeld : Fraud checks passed and sufficient funds
+    Initiated --> Rejected : Fraud check failed or insufficient funds
+
+    FundsHeld --> SentToBiller : Payment request sent
+
+    SentToBiller --> Completed : Biller confirms payment
+    SentToBiller --> Failed : Biller explicitly refuses payment
+    SentToBiller --> Unknown : Timeout after 10 seconds
+
+    Unknown --> Completed : Callback, retry, or settlement file confirms payment
+    Unknown --> Failed : Biller refuses or reconciliation finds no payment
+
+    Failed --> Refunded : Held funds released to wallet
+
+    Completed --> [*]
+    Rejected --> [*]
+    Refunded --> [*]

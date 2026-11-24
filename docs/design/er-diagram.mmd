@@ -1,0 +1,135 @@
+erDiagram
+    USERS ||--o{ WALLETS : owns
+    USERS ||--o{ AUDIT_LOGS : triggers
+    USERS ||--o{ PAYMENTS : initiates
+    USERS ||--o{ COMMISSION_ENTRIES : earns
+
+    WALLETS ||--o{ LEDGER_ENTRIES : records
+    WALLETS ||--o{ PAYMENTS : funds
+
+    BILLERS ||--o{ BILLER_SERVICES : offers
+    BILLER_SERVICES ||--o{ PAYMENTS : paid_for
+
+    BILLERS ||--o{ FEE_RULES : has
+    BILLERS ||--o{ PROMOTIONS : has
+
+    PAYMENTS ||--o{ PAYMENT_EVENTS : tracks
+    PAYMENTS ||--o{ NOTIFICATIONS : triggers
+    PAYMENTS ||--o{ COMMISSION_ENTRIES : generates
+
+    BILLERS ||--o{ RECONCILIATION_REPORTS : settles
+
+    USERS {
+        uuid id PK
+        string name
+        string role
+        string verification_level
+        boolean is_blocked
+        timestamp blocked_until
+    }
+
+    WALLETS {
+        uuid id PK
+        uuid user_id FK,UK
+        string currency
+        timestamp created_at
+    }
+
+    LEDGER_ENTRIES {
+        uuid id PK
+        uuid wallet_id FK
+        uuid payment_id FK
+        string entry_type
+        decimal amount
+        string currency
+        string reference
+        timestamp created_at
+    }
+
+    BILLERS {
+        uuid id PK
+        string code
+        string name
+        string protocol
+        boolean is_active
+    }
+
+    BILLER_SERVICES {
+        uuid id PK
+        uuid biller_id FK
+        string name
+        jsonb required_fields
+        decimal min_amount
+        decimal max_amount
+    }
+
+    PAYMENTS {
+        uuid id PK
+        uuid initiated_by_user_id FK
+        uuid wallet_id FK
+        uuid service_id FK
+        string idempotency_key UK
+        string request_hash
+        string biller_reference
+        decimal amount
+        decimal fee
+        decimal total_amount
+        string currency
+        string status
+        timestamp created_at
+    }
+
+    PAYMENT_EVENTS {
+        uuid id PK
+        uuid payment_id FK
+        string from_state
+        string to_state
+        string reason
+        timestamp created_at
+    }
+
+    FEE_RULES {
+        uuid id PK
+        uuid biller_id FK
+        string rule_type
+        jsonb config
+    }
+
+    PROMOTIONS {
+        uuid id PK
+        uuid biller_id FK
+        timestamp start_date
+        timestamp end_date
+    }
+
+    COMMISSION_ENTRIES {
+        uuid id PK
+        uuid payment_id FK
+        uuid agent_id FK
+        decimal commission_amount
+        string status
+        timestamp created_at
+    }
+
+    NOTIFICATIONS {
+        uuid id PK
+        uuid payment_id FK
+        string channel
+        string status
+        int retry_count
+    }
+
+    RECONCILIATION_REPORTS {
+        uuid id PK
+        uuid biller_id FK
+        date settlement_date
+        jsonb discrepancies
+    }
+
+    AUDIT_LOGS {
+        uuid id PK
+        uuid actor_id FK
+        string action
+        string reason
+        timestamp created_at
+    }

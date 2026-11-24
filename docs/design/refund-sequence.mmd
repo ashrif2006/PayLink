@@ -1,0 +1,29 @@
+sequenceDiagram
+    participant API as Payment Processing
+    participant DB as Database
+    participant Biller as Biller Adapter
+    participant Wallet as Wallet & Ledger
+    participant Notif as Notifications
+
+    API->>Biller: Send Payment Request
+    Biller-->>API: Payment Refused (Error Code)
+
+    API->>DB: Update payment status to Failed
+
+    API->>Wallet: Release held funds
+
+    Wallet->>DB: Check if funds were already released
+
+    alt Funds not released before
+        Wallet->>DB: Record release ledger entries
+        DB-->>Wallet: Release recorded
+        Wallet-->>API: Funds released successfully
+
+        API->>DB: Update payment status to Refunded
+        API->>Notif: Emit PaymentFailed event
+        Notif-->>API: Notification event accepted
+
+    else Funds already released
+        DB-->>Wallet: Release already recorded
+        Wallet-->>API: No additional release required
+    end

@@ -1,0 +1,58 @@
+flowchart LR
+    Customer((Customer))
+    Agent((Agent))
+    Admin((Admin))
+    Support((Support))
+    Operations((Operations User))
+    Biller((External Biller))
+
+    subgraph PayLink["PayLink System"]
+        UC1([Register Account])
+        UC2([Verify Customer])
+        UC3([Top Up Wallet])
+        UC4([View Wallet Balance])
+        UC5([View Transaction History])
+        UC6([Browse Biller Catalog])
+        UC7([Inquire Bill Details])
+        UC8([Pay Bill])
+        UC9([View Payment Status])
+        UC10([Receive Notifications])
+        UC11([Earn Agent Commission])
+        UC12([Manage Billers and Services])
+        UC13([Manage Fees and Promotions])
+        UC14([Block or Unblock Accounts])
+        UC15([Search Payments])
+        UC16([Review Reconciliation Reports])
+        UC17([Manage Payment Disputes])
+        UC18([Process Payment Inquiry])
+    end
+
+    Customer --> UC1
+    Customer --> UC3
+    Customer --> UC4
+    Customer --> UC5
+    Customer --> UC6
+    Customer --> UC7
+    Customer --> UC8
+    Customer --> UC9
+    Customer --> UC10
+
+    Agent --> UC7
+    Agent --> UC8
+    Agent --> UC11
+
+    Admin --> UC2
+    Admin --> UC12
+    Admin --> UC13
+
+    Support --> UC14
+    Support --> UC15
+    Support --> UC17
+    Support --> UC18
+
+    Operations --> UC16
+
+    Biller --> UC7
+    Biller --> UC8
+    Biller --> UC9
+    Biller --> UC16

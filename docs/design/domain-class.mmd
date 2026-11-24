@@ -1,0 +1,101 @@
+classDiagram
+    class Wallet {
+        +UUID id
+        +Decimal getAvailableBalance()
+        +Decimal getHeldBalance()
+        +holdFunds(Decimal amount)
+        +releaseHold(Decimal amount)
+        +finalizePayment(Decimal amount)
+    }
+
+    class LedgerEntry {
+        +UUID id
+        +EntryType type
+        +Decimal amount
+        +String currency
+        +DateTime timestamp
+    }
+
+    class Payment {
+        +UUID id
+        +String idempotencyKey
+        +String billerReference
+        +Decimal amount
+        +Decimal fee
+        +Decimal totalAmount
+        +PaymentState status
+        +transitionTo(PaymentState next)
+    }
+
+    class BillerAdapter {
+        <<interface>>
+        +inquire(String reference)
+        +pay(Payment payment)
+        +checkStatus(String reference)
+    }
+
+    class ElectroCoAdapter {
+        +inquire(String reference)
+        +pay(Payment payment)
+        +checkStatus(String reference)
+    }
+
+    class AquaCoAdapter {
+        +inquire(String reference)
+        +pay(Payment payment)
+        +checkStatus(String reference)
+    }
+
+    class TopUpNetAdapter {
+        +inquire(String reference)
+        +pay(Payment payment)
+        +checkStatus(String reference)
+    }
+
+    class PaymentService {
+        +processPayment(Payment payment)
+        +handleBillerResponse(Payment payment)
+        +handleTimeout(Payment payment)
+        +retryStatusCheck(Payment payment)
+    }
+
+    class FraudService {
+        +checkFraud(Payment payment)
+        +checkDailyLimit(Payment payment)
+        +checkVelocity(Payment payment)
+    }
+
+    class FeeCalculator {
+        +calculateFee(Payment payment)
+    }
+
+    class CommissionService {
+        +calculateCommission(Payment payment)
+        +creditAgentCommission(Payment payment)
+    }
+
+    class NotificationService {
+        +sendPaymentSuccess(Payment payment)
+        +sendPaymentFailure(Payment payment)
+    }
+
+    class ReconciliationService {
+        +reconcilePayments()
+        +detectDiscrepancies()
+    }
+
+    Wallet "1" --> "*" LedgerEntry : records
+    Wallet "1" --> "*" Payment : funds
+
+    PaymentService --> Wallet : uses
+    PaymentService --> FraudService : validates
+    PaymentService --> FeeCalculator : calculates fee
+    PaymentService --> BillerAdapter : uses
+    PaymentService --> NotificationService : notifies
+
+    BillerAdapter <|.. ElectroCoAdapter
+    BillerAdapter <|.. AquaCoAdapter
+    BillerAdapter <|.. TopUpNetAdapter
+
+    PaymentService --> CommissionService : calculates commission
+    PaymentService --> ReconciliationService : supports reconciliation
