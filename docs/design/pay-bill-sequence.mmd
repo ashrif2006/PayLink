@@ -1,0 +1,54 @@
+sequenceDiagram
+    actor Customer
+    participant API as Payment API
+    participant DB as Database
+    participant Fraud as Fraud Checks
+    participant Wallet as Wallet & Ledger
+    participant Biller as Biller Adapter
+    participant Notif as Notifications
+
+    Customer->>API: POST /payments (Idempotency-Key, bill details)
+
+    API->>DB: Check Idempotency Key
+
+    alt Key already exists
+        DB-->>API: Return existing payment result
+        API-->>Customer: Return previous response
+    else New Idempotency Key
+        API->>DB: Save key and request details
+        API->>Fraud: Check limits, velocity and block status
+        Fraud-->>API: Fraud check passed
+
+        API->>Wallet: Hold principal amount + fee
+        Wallet->>DB: Record hold ledger entries
+        DB-->>Wallet: Hold recorded
+        Wallet-->>API: FundsHeld
+
+        API->>Biller: Send payment request (10s timeout)
+
+        alt Biller confirms payment
+            Biller-->>API: Payment Confirmed
+            API->>DB: Update payment status to Completed
+            API->>Wallet: Finalize payment and record ledger entries
+            Wallet-->>API: Transaction finalized
+            API->>Notif: Emit PaymentCompleted event
+            API-->>Customer: 200 OK (Payment Receipt)
+            Notif-->>Customer: Send SMS and Push Notification
+
+        else Biller refuses payment
+            Biller-->>API: Payment Refused
+            API->>DB: Update status to Failed
+            API->>Wallet: Release held funds
+            Wallet->>DB: Record release ledger entries
+            API->>DB: Update status to Refunded
+            API->>Notif: Emit PaymentFailed event
+            API-->>Customer: Payment Failed
+            Notif-->>Customer: Send failure notification
+
+        else Timeout after 10 seconds
+            API->>DB: Update status to Unknown
+            Note over API,Wallet: Funds remain held
+            API->>DB: Schedule status re-queries at 1, 5 and 15 minutes
+            API-->>Customer: Payment Pending
+        end
+    end
