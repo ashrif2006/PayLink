@@ -1,101 +1,181 @@
 classDiagram
+    direction LR
+
+    class Customer {
+        +Guid Id
+        +string Name
+        +VerificationLevel Level
+        +bool IsBlocked
+    }
+    class Agent {
+        +Guid Id
+        +Guid WalletId
+    }
     class Wallet {
-        +UUID id
-        +Decimal getAvailableBalance()
-        +Decimal getHeldBalance()
-        +holdFunds(Decimal amount)
-        +releaseHold(Decimal amount)
-        +finalizePayment(Decimal amount)
+        +Guid Id
+        +WalletOwnerType OwnerType
+        +Money Available()
+        +Money Held()
+        +Hold(amount, reason) LedgerEntry
+        +Release(amount, reason) LedgerEntry
+        +Capture(amount, reason) LedgerEntry
     }
-
     class LedgerEntry {
-        +UUID id
-        +EntryType type
-        +Decimal amount
-        +String currency
-        +DateTime timestamp
+        +Guid Id
+        +Guid WalletId
+        +decimal Amount
+        +EntryType Type
+        +string Reason
+        +DateTime CreatedAt
     }
-
+    class Biller {
+        +string Code
+        +string Name
+        +bool IsActive
+        +decimal MinAmount
+        +decimal MaxAmount
+    }
     class Payment {
-        +UUID id
-        +String idempotencyKey
-        +String billerReference
-        +Decimal amount
-        +Decimal fee
-        +Decimal totalAmount
-        +PaymentState status
-        +transitionTo(PaymentState next)
+        +Guid Id
+        +string IdempotencyKey
+        +Guid PayerWalletId
+        +Guid InitiatedByUserId
+        +Guid AgentId (nullable)
+        +Money Amount
+        +Money Fee
+        +string RejectReason
+        +IPaymentState State
+        +Reject(reason)
+        +HoldFunds()
+        +SendToBiller()
+        +Complete()
+        +Fail()
+        +MarkUnknown()
+        +Refund()
+        -ChangeState(next)
     }
 
-    class BillerAdapter {
+    class IPaymentState {
         <<interface>>
-        +inquire(String reference)
-        +pay(Payment payment)
-        +checkStatus(String reference)
+        +Reject(payment, reason)
+        +HoldFunds(payment)
+        +SendToBiller(payment)
+        +Complete(payment)
+        +Fail(payment)
+        +MarkUnknown(payment)
+        +Refund(payment)
+    }
+    class InitiatedState
+    class FundsHeldState
+    class SentToBillerState
+    class UnknownState
+    class FailedState
+    class CompletedState
+    class RejectedState
+    class RefundedState
+
+    class IBillerGateway {
+        <<interface>>
+        +Inquiry(request) BillInfo
+        +Pay(request) PayResult
+    }
+    class ElectroCoAdapter
+    class AquaCoAdapter
+    class TopUpNetAdapter
+    class NetCoAdapter
+    class BillerGatewayFactory {
+        +Create(billerCode) IBillerGateway
     }
 
-    class ElectroCoAdapter {
-        +inquire(String reference)
-        +pay(Payment payment)
-        +checkStatus(String reference)
+    class IFeeStrategy {
+        <<interface>>
+        +Calculate(amount) Money
     }
+    class FixedFee
+    class PercentageFee
+    class TieredFee
+    class PromotionFee
 
-    class AquaCoAdapter {
-        +inquire(String reference)
-        +pay(Payment payment)
-        +checkStatus(String reference)
+    class IFraudRule {
+        <<interface>>
+        +SetNext(rule) IFraudRule
+        +Check(context) RuleResult
     }
-
-    class TopUpNetAdapter {
-        +inquire(String reference)
-        +pay(Payment payment)
-        +checkStatus(String reference)
+    class FraudRuleBase {
+        <<abstract>>
+        -IFraudRule next
+        +Check(context) RuleResult
+        #Evaluate(context) RuleResult
     }
+    class FraudContext {
+        +Customer Customer
+        +Wallet Wallet
+        +Money Amount
+        +int PaymentsInLastMinute
+        +Money PaidToday
+    }
+    class DailyLimitRule
+    class VelocityRule
+    class BlockedAccountRule
 
+    class IPaymentObserver {
+        <<interface>>
+        +OnCompleted(payment)
+        +OnFailed(payment)
+    }
+    class SmsNotifier
+    class PushNotifier
+    class AgentCommissionHandler
+
+    class IUnitOfWork {
+        <<interface>>
+        +ExecuteInTransaction(work)
+    }
     class PaymentService {
-        +processPayment(Payment payment)
-        +handleBillerResponse(Payment payment)
-        +handleTimeout(Payment payment)
-        +retryStatusCheck(Payment payment)
+        +Pay(command) Payment
     }
 
-    class FraudService {
-        +checkFraud(Payment payment)
-        +checkDailyLimit(Payment payment)
-        +checkVelocity(Payment payment)
-    }
+    Customer "1" --> "1" Wallet
+    Agent "1" --> "1" Wallet
+    Wallet "1" --> "*" LedgerEntry
+    Payment "*" --> "1" Wallet : payer
+    Payment "*" --> "0..1" Agent : at terminal of
+    Payment "*" --> "1" Biller
+    Payment --> IPaymentState
 
-    class FeeCalculator {
-        +calculateFee(Payment payment)
-    }
+    IPaymentState <|.. InitiatedState
+    IPaymentState <|.. FundsHeldState
+    IPaymentState <|.. SentToBillerState
+    IPaymentState <|.. UnknownState
+    IPaymentState <|.. FailedState
+    IPaymentState <|.. CompletedState
+    IPaymentState <|.. RejectedState
+    IPaymentState <|.. RefundedState
 
-    class CommissionService {
-        +calculateCommission(Payment payment)
-        +creditAgentCommission(Payment payment)
-    }
+    IBillerGateway <|.. ElectroCoAdapter
+    IBillerGateway <|.. AquaCoAdapter
+    IBillerGateway <|.. TopUpNetAdapter
+    IBillerGateway <|.. NetCoAdapter
+    BillerGatewayFactory ..> IBillerGateway
 
-    class NotificationService {
-        +sendPaymentSuccess(Payment payment)
-        +sendPaymentFailure(Payment payment)
-    }
+    IFeeStrategy <|.. FixedFee
+    IFeeStrategy <|.. PercentageFee
+    IFeeStrategy <|.. TieredFee
+    IFeeStrategy <|.. PromotionFee
 
-    class ReconciliationService {
-        +reconcilePayments()
-        +detectDiscrepancies()
-    }
+    IFraudRule <|.. FraudRuleBase
+    FraudRuleBase <|-- DailyLimitRule
+    FraudRuleBase <|-- VelocityRule
+    FraudRuleBase <|-- BlockedAccountRule
+    IFraudRule ..> FraudContext
 
-    Wallet "1" --> "*" LedgerEntry : records
-    Wallet "1" --> "*" Payment : funds
+    IPaymentObserver <|.. SmsNotifier
+    IPaymentObserver <|.. PushNotifier
+    IPaymentObserver <|.. AgentCommissionHandler
 
-    PaymentService --> Wallet : uses
-    PaymentService --> FraudService : validates
-    PaymentService --> FeeCalculator : calculates fee
-    PaymentService --> BillerAdapter : uses
-    PaymentService --> NotificationService : notifies
-
-    BillerAdapter <|.. ElectroCoAdapter
-    BillerAdapter <|.. AquaCoAdapter
-    BillerAdapter <|.. TopUpNetAdapter
-
-    PaymentService --> CommissionService : calculates commission
-    PaymentService --> ReconciliationService : supports reconciliation
+    PaymentService --> IUnitOfWork
+    PaymentService --> IFraudRule
+    PaymentService --> IFeeStrategy
+    PaymentService --> BillerGatewayFactory
+    PaymentService --> IPaymentObserver
+    PaymentService --> Payment
