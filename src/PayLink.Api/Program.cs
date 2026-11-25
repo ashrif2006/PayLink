@@ -1,5 +1,13 @@
+using Microsoft.EntityFrameworkCore;
+using PayLink.Api.Data;
+using System;
+
 var builder = WebApplication.CreateBuilder(args);
 
+
+//add configuration for database connection string
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 // Add services to the container.
 
 builder.Services.AddControllers();
