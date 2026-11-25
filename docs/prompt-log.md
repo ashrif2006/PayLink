@@ -54,7 +54,113 @@ root, `COPY . .` followed by `dotnet restore`, `EXPOSE 80`, and `ENTRYPOINT dotn
    `dotnet publish /p:UseAppHost=false` and `ENTRYPOINT ["dotnet", "PayLink.Api.dll"]`.
 
    
+## Entry 3 — Architecture Selection
 
+**AI Tool:** ChatGPT
+
+**Prompt (summary)**
+
+> Review the PayLink project requirements, existing documentation,
+> technology stack, and project structure. Recommend a suitable
+> software architecture that supports the project requirements
+> without disrupting the existing implementation and DevOps setup.
+
+**AI Answer Summary**
+
+The AI recommended a Modular Monolith Architecture with eight
+business modules, clear module boundaries, and layered internal
+organization.
+
+**Verdict:** Accepted as a proposal.
+
+**Why**
+
+- Compatible with the existing ASP.NET Core and SQL Server setup.
+- Suitable for a small development team.
+- Supports financial transaction consistency.
+- Reduces deployment and infrastructure complexity.
+- Supports future architectural evolution.
+
+**Output**
+
+- docs/design/architecture.md
+- docs/design/architecture.mmd
+
+
+## Entry 4 — Design Patterns Selection
+
+**AI Tool:** ChatGPT
+
+**Prompt (summary)**
+
+> Recommend five object-oriented design patterns for PayLink
+> based on the project requirements and existing design.
+> Explain the problem addressed by each pattern, its responsible
+> module, proposed components, benefits, and testing approach.
+
+**AI Answer Summary**
+
+The AI recommended the following patterns:
+
+- Adapter for Biller Integration.
+- State for Payment Processing.
+- Strategy for Fees and Commissions.
+- Chain of Responsibility for Fraud Checks.
+- Observer for Notifications.
+
+**Verdict:** Accepted as a proposal.
+
+**Why**
+
+The selected patterns address specific business requirements
+and support maintainability, extensibility, and testability.
+
+The proposed classes and interfaces are intended for future
+implementation and are not claimed to be implemented already.
+
+**Output**
+
+- docs/design/design-patterns.md
+
+
+## Entry 5 — Architecture Decision Records
+
+**AI Tool:** ChatGPT
+
+**Prompt (summary)**
+
+> Prepare architecture decision records for architecture style,
+> module communication, and data ownership. Compare alternative
+> approaches, explain their trade-offs, and recommend decisions
+> compatible with PayLink's existing technology stack.
+
+**AI Answer Summary**
+
+The AI proposed:
+
+- Modular Monolith Architecture.
+- Hybrid synchronous and asynchronous module communication.
+- A shared SQL Server database with logical module ownership.
+
+Each decision record includes context, considered alternatives,
+advantages, disadvantages, rationale, consequences, and
+mitigation strategies.
+
+**Verdict:** Accepted as a proposal.
+
+**Why**
+
+The proposed decisions support financial consistency, clear
+module boundaries, and the required Phase 2 architectural
+evolution.
+
+All decisions remain subject to team review and approval.
+
+**Output**
+
+- docs/adr/001-architecture-style.md
+- docs/adr/002-module-communication.md
+- docs/adr/003-data-ownership.md
 
 
 

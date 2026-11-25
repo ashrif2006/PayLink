@@ -1,0 +1,58 @@
+flowchart TD
+    Client["Client / API Consumer"]
+
+    subgraph PayLink["PayLink - Modular Monolith"]
+        API["Presentation Layer - ASP.NET Core Web API"]
+
+        subgraph Modules["Business Modules"]
+            Wallet["Accounts and Wallet"]
+            Catalog["Biller Catalog"]
+            Payment["Payment Processing"]
+            Integration["Biller Integration"]
+            Fees["Fees and Commissions"]
+            Fraud["Fraud Checks"]
+            Notifications["Notifications"]
+            Reconciliation["Reconciliation"]
+        end
+
+        Events["Event Bus"]
+        Persistence["Infrastructure - Entity Framework Core"]
+
+        API --> Wallet
+        API --> Catalog
+        API --> Payment
+
+        Payment --> Wallet
+        Payment --> Catalog
+        Payment --> Fees
+        Payment --> Fraud
+        Payment --> Integration
+
+        Payment -.-> Events
+        Events -.-> Notifications
+        Events -.-> Reconciliation
+
+        Wallet --> Persistence
+        Catalog --> Persistence
+        Payment --> Persistence
+        Fees --> Persistence
+        Fraud --> Persistence
+        Notifications --> Persistence
+        Reconciliation --> Persistence
+    end
+
+    Database[("Microsoft SQL Server")]
+    ElectroCo["ElectroCo API"]
+    AquaCo["AquaCo API"]
+    TopUpNet["TopUpNet API"]
+    Provider["Notification Provider"]
+
+    Client --> API
+    Persistence --> Database
+
+    Integration --> ElectroCo
+    Integration --> AquaCo
+    Integration --> TopUpNet
+
+    Notifications --> Provider
+    Reconciliation --> Integration
